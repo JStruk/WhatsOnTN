@@ -114,7 +114,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="relative overflow-hidden rounded-xl border bg-gradient-to-br from-indigo-600 via-fuchsia-600 to-rose-500 text-white">
+    <div class="relative overflow-hidden rounded-xl border bg-gradient-to-br from-slate-800 via-blue-800 to-cyan-700 text-white">
       <div class="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_20%,white,transparent_40%),radial-gradient(circle_at_80%_0%,white,transparent_40%)]"></div>
       <div class="relative p-6 sm:p-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="space-y-1">
