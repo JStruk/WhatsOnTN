@@ -27,7 +27,7 @@ const events = ref<EventItem[]>([])
 const lastUpdated = ref<Date | null>(null)
 let refreshTimer: number | null = null
 
-const leagues = ['All', 'NFL', 'NBA', 'NHL', 'MLB'] as const
+const leagues = ['All', 'NHL', 'NFL', 'MLB', 'NBA'] as const
 type LeagueFilter = typeof leagues[number]
 const activeLeague = ref<LeagueFilter>('All')
 
@@ -175,8 +175,8 @@ onBeforeUnmount(() => {
       </Card>
     </div>
 
-    <div v-else class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-      <Card v-for="e in filtered" :key="e.id" class="overflow-hidden">
+    <div v-else class="grid sm:grid-cols-2 xl:grid-cols-3">
+      <Card v-for="e in filtered" :key="e.id" class="overflow-hidden mx-4">
         <CardHeader class="pb-3">
           <div class="flex items-center justify-between">
             <CardTitle class="text-base flex items-center gap-2">
