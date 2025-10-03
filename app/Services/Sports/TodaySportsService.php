@@ -12,22 +12,23 @@ class TodaySportsService
      * Fetch and normalize today's events across major leagues.
      *
      * @param string|null $date Y-m-d in app timezone, defaults to today
+     * @param string $timezone Timezone for date filtering (defaults to America/New_York for North American sports)
      * @return array<int, array<string, mixed>>
      */
-    public function getTodayEvents(?string $date = null): array
+    public function getTodayEvents(?string $date = null, string $timezone = 'America/New_York'): array
     {
         $dateLocal = $date ? Carbon::parse($date, config('app.timezone')) : Carbon::now(config('app.timezone'));
         $dateStr = $dateLocal->format('Y-m-d');
 
-        $cacheKey = "sports:today:{$dateStr}";
+        $cacheKey = "sports:today:{$dateStr}:{$timezone}";
 
-        return Cache::remember($cacheKey, now()->addSeconds(60), function () use ($dateStr) {
+        return Cache::remember($cacheKey, now()->addSeconds(60), function () use ($dateStr, $timezone) {
             $events = [];
 
             // Fetch in sequence to keep it simple; endpoints are fast and cached
             $events = array_merge(
                 $events,
-                $this->fetchNhl($dateStr),
+                $this->fetchNhl($dateStr, $timezone),
                 $this->fetchNba($dateStr),
                 $this->fetchMlb($dateStr),
                 $this->fetchNfl($dateStr)
@@ -45,7 +46,7 @@ class TodaySportsService
     /**
      * NHL: https://api-web.nhle.com/v1/schedule/YYYY-MM-DD
      */
-    protected function fetchNhl(string $date): array
+    protected function fetchNhl(string $date, string $timezone = 'America/New_York'): array
     {
         $url = "https://api-web.nhle.com/v1/schedule/{$date}";
         $response = Http::timeout(10)->retry(1, 200)->get($url);
@@ -60,12 +61,13 @@ class TodaySportsService
 
         foreach ($gameWeeks as $day) {
             foreach ($day['games'] ?? [] as $game) {
-                // Only include games that occur on the requested $date in app timezone
+                // Only include games that occur on the requested $date in the specified timezone
+                // This ensures games are grouped by their "local" date for the user's timezone
                 $gameDateLocal = null;
                 if (!empty($game['startTimeUTC'])) {
                     try {
                         $gameDateLocal = Carbon::parse($game['startTimeUTC'])
-                            ->timezone(config('app.timezone'))
+                            ->timezone($timezone)
                             ->toDateString();
                     } catch (\Throwable $e) {
                         $gameDateLocal = null;
@@ -93,7 +95,9 @@ class TodaySportsService
                     'league' => 'NHL',
                     'status' => $this->normalizeStatusNhl($game['gameState'] ?? ''),
                     'startTime' => $this->toIso($game['startTimeUTC'] ?? null),
+                    'startTimeUTC' => $game['startTimeUTC'] ?? null,
                     'venue' => $game['venue']['default'] ?? null,
+                    'venueTimezone' => $game['venueTimezone'] ?? null,
                     'homeTeam' => $homeName !== '' ? $homeName : ($homeTeam['abbrev'] ?? ''),
                     'awayTeam' => $awayName !== '' ? $awayName : ($awayTeam['abbrev'] ?? ''),
                     'homeScore' => 0, // Scores are not included in schedule payload

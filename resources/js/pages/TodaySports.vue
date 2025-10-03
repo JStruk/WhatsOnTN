@@ -13,7 +13,9 @@ type EventItem = {
   league: 'NHL' | 'NBA' | 'MLB' | 'NFL' | string
   status: 'scheduled' | 'live' | 'final' | string
   startTime: string
+  startTimeUTC?: string | null
   venue?: string | null
+  venueTimezone?: string | null
   homeTeam: string
   awayTeam: string
   homeScore: number
@@ -25,6 +27,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const events = ref<EventItem[]>([])
 const lastUpdated = ref<Date | null>(null)
+const userTimezone = ref<string>('')
 let refreshTimer: number | null = null
 
 const leagues = ['All', 'NHL', 'NFL', 'MLB', 'NBA'] as const
@@ -58,7 +61,11 @@ function teamInitials(name: string) {
 
 function formatTime(iso: string) {
   const d = new Date(iso)
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  return d.toLocaleTimeString(undefined, { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    timeZoneName: 'short'
+  })
 }
 
 function formatDate(d: Date | null) {
@@ -76,7 +83,12 @@ async function fetchEvents() {
   loading.value = events.value.length === 0
   error.value = null
   try {
-    const res = await fetch('/api/sports/today', { headers: { 'Accept': 'application/json' } })
+    // Get user's timezone
+    const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    userTimezone.value = detectedTimezone
+    const url = `/api/sports/today?timezone=${encodeURIComponent(detectedTimezone)}`
+    
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
     if (!res.ok) throw new Error('Failed to load sports data')
     const json = await res.json()
     events.value = json.events || []
@@ -127,6 +139,8 @@ onBeforeUnmount(() => {
           <div class="text-xs text-white/85">{{ new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) }}</div>
           <div class="hidden sm:block h-6 w-px bg-white/30"></div>
           <div class="text-xs text-white/85">{{ totalCount }} events</div>
+          <div class="hidden sm:block h-6 w-px bg-white/30"></div>
+          <div class="text-xs text-white/85" v-if="userTimezone">Timezone: {{ userTimezone }}</div>
           <div class="hidden sm:block h-6 w-px bg-white/30"></div>
           <div class="text-xs text-white/85" v-if="lastUpdated">Updated {{ formatDate(lastUpdated) }}</div>
           <Button :disabled="loading" variant="secondary" size="sm" @click="fetchEvents">Refresh</Button>
