@@ -11,7 +11,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, sportsToday } from '@/routes';
+import { dashboard } from '@/routes';
+import sports from '@/routes/sports';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
@@ -25,7 +26,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Sports Today',
-        href: sportsToday(),
+        href: sports.today(),
         icon: LayoutGrid,
     },
 ];
