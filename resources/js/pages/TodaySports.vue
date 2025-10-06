@@ -46,11 +46,39 @@ const grouped = computed(() => {
   return groups
 })
 
+const isBeforeNoonET = computed(() => {
+  const hourEt = Number(
+    new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      hour12: false,
+      timeZone: 'America/New_York',
+    }).format(new Date())
+  )
+  return hourEt < 12
+})
+
 const totalCount = computed(() => events.value.length)
 
 const filtered = computed(() => {
-  if (activeLeague.value === 'All') return events.value
-  return events.value.filter(e => e.league === activeLeague.value)
+  // When "All" is active, sort by league according to the `leagues` array order,
+  // then by start time within each league.
+  if (activeLeague.value === 'All') {
+    const orderMap: Record<string, number> = {}
+    // Build league -> order map, skipping the "All" entry
+    leagues.forEach((l, idx) => {
+      if (l !== 'All') orderMap[l] = idx
+    })
+    return [...events.value].sort((a, b) => {
+      const ai = orderMap[a.league] ?? Number.MAX_SAFE_INTEGER
+      const bi = orderMap[b.league] ?? Number.MAX_SAFE_INTEGER
+      if (ai !== bi) return ai - bi
+      return a.startTime.localeCompare(b.startTime)
+    })
+  }
+  // For a specific league, sort by start time
+  return events.value
+    .filter(e => e.league === activeLeague.value)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
 })
 
 function teamInitials(name: string) {
@@ -61,11 +89,16 @@ function teamInitials(name: string) {
 
 function formatTime(iso: string) {
   const d = new Date(iso)
-  return d.toLocaleTimeString(undefined, { 
-    hour: 'numeric', 
+  return d.toLocaleTimeString(undefined, {
+    hour: 'numeric',
     minute: '2-digit',
     timeZoneName: 'short'
   })
+}
+
+function formatShortDate(iso: string) {
+  const d = new Date(iso)
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toLowerCase()
 }
 
 function formatDate(d: Date | null) {
@@ -87,7 +120,7 @@ async function fetchEvents() {
     const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
     userTimezone.value = detectedTimezone
     const url = `/api/sports/today?timezone=${encodeURIComponent(detectedTimezone)}`
-    
+
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
     if (!res.ok) throw new Error('Failed to load sports data')
     const json = await res.json()
@@ -148,7 +181,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2 mx-2">
       <Button
         v-for="l in leagues"
         :key="l"
@@ -190,12 +223,13 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-else class="grid sm:grid-cols-2 xl:grid-cols-3">
-      <Card v-for="e in filtered" :key="e.id" class="overflow-hidden mx-4">
+      <Card v-for="e in filtered" :key="e.id" class="overflow-hidden m-2">
         <CardHeader class="pb-3">
           <div class="flex items-center justify-between">
             <CardTitle class="text-base flex items-center gap-2">
               <Badge variant="secondary">{{ e.league }}</Badge>
               <span class="text-xs text-muted-foreground">{{ formatTime(e.startTime) }}</span>
+              <span v-if="e.league === 'NBA' && isBeforeNoonET" class="text-xs text-muted-foreground">• {{ formatShortDate(e.startTime) }}</span>
             </CardTitle>
             <div class="flex items-center gap-2">
               <div v-if="e.status === 'live'" class="flex items-center gap-1 text-red-500">
@@ -205,6 +239,7 @@ onBeforeUnmount(() => {
               <Badge :variant="statusToBadgeVariant(e.status)">{{ e.status }}</Badge>
             </div>
           </div>
+          <div v-if="e.league === 'NBA' && isBeforeNoonET" class="text-xs text-muted-foreground">NBA games aren’t refreshed until 12 PM EST</div>
           <CardDescription v-if="e.venue" class="truncate">{{ e.venue }}</CardDescription>
         </CardHeader>
         <CardContent class="grid gap-3">
