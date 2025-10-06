@@ -273,9 +273,8 @@ onBeforeUnmount(() => {
               {{ e.homeScore }}
             </div>
           </div>
-          <div class="flex items-center justify-between pt-1">
-            <Button v-if="e.link" :href="e.link" target="_blank" variant="link" size="sm">View details</Button>
-            <div class="text-xs text-muted-foreground ml-auto">Status: {{ e.status }}</div>
+          <div v-if="e.link" class="flex items-center justify-between pt-1">
+            <Button :href="e.link" target="_blank" variant="link" size="sm">View details</Button>
           </div>
         </CardContent>
       </Card>
