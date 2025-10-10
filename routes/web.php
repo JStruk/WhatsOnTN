@@ -21,3 +21,8 @@ require __DIR__.'/auth.php';
 Route::get('/sports/today', function () {
     return Inertia::render('TodaySports');
 })->name('sports.today');
+
+// V2 redesigned UI
+Route::get('/v2', function () {
+    return Inertia::render('v2/Index');
+})->name('v2.index');
