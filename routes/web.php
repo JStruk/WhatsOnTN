@@ -19,3 +19,8 @@ Route::get('dashboard', function () {
 
 // Sports page route
 Route::get('/sports/today', [SportsController::class, 'index'])->name('sports.today');
+
+// V2 redesigned UI
+Route::get('/v2', function () {
+    return Inertia::render('v2/Index');
+})->name('v2.index');
