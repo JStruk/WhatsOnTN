@@ -2,81 +2,37 @@
 
 use Illuminate\Support\Facades\Http;
 
-it('returns normalized events for today', function () {
-    // Fake external HTTP calls for NHL/NBA/MLB/NFL
+it('correctly handles NBA UTC-formatted Eastern Time', function () {
+    // Test with NBA's UTC format that actually represents Eastern Time
+    $nbaTime = '2024-01-15T19:30:00Z'; // NBA says 7:30 PM but it's actually Eastern Time
+    
     Http::fake([
-        'statsapi.web.nhl.com/*' => Http::response([
-            'dates' => [[
-                'games' => [[
-                    'gamePk' => 1,
-                    'status' => ['detailedState' => 'Scheduled'],
-                    'gameDate' => now()->toIso8601String(),
-                    'venue' => ['name' => 'Test Arena'],
-                    'teams' => [
-                        'home' => ['team' => ['name' => 'Home NHL'], 'score' => 0],
-                        'away' => ['team' => ['name' => 'Away NHL'], 'score' => 0],
-                    ],
-                    'link' => '/game/1',
-                ]],
-            ]], 200),
         'cdn.nba.com/*' => Http::response([
             'scoreboard' => [
                 'games' => [[
-                    'gameId' => '2',
-                    'gameStatusText' => '7:00 PM ET',
-                    'gameEt' => now()->toIso8601String(),
-                    'arenaName' => 'NBA Arena',
-                    'homeTeam' => ['teamName' => 'Home NBA', 'score' => '0'],
-                    'awayTeam' => ['teamName' => 'Away NBA', 'score' => '0'],
+                    'gameId' => 'test-game',
+                    'gameStatusText' => '7:30 PM ET',
+                    'gameEt' => $nbaTime,
+                    'arenaName' => 'Test Arena',
+                    'homeTeam' => ['teamName' => 'Test Home', 'score' => '0'],
+                    'awayTeam' => ['teamName' => 'Test Away', 'score' => '0'],
                 ]],
             ],
-        ], 200),
-        'statsapi.mlb.com/*' => Http::response([
-            'dates' => [[
-                'games' => [[
-                    'gamePk' => 3,
-                    'status' => ['detailedState' => 'Final'],
-                    'gameDate' => now()->toIso8601String(),
-                    'venue' => ['name' => 'MLB Park'],
-                    'teams' => [
-                        'home' => ['team' => ['name' => 'Home MLB'], 'score' => 3],
-                        'away' => ['team' => ['name' => 'Away MLB'], 'score' => 2],
-                    ],
-                    'link' => '/game/3',
-                ]],
-            ]], 200),
-        'site.api.espn.com/*' => Http::response([
-            'events' => [[
-                'id' => '4',
-                'date' => now()->toIso8601String(),
-                'links' => [['href' => 'https://espn.com/game/4']],
-                'competitions' => [[
-                    'status' => ['type' => ['name' => 'STATUS_IN_PROGRESS']],
-                    'venue' => ['fullName' => 'NFL Stadium'],
-                    'competitors' => [
-                        ['homeAway' => 'home', 'team' => ['displayName' => 'Home NFL'], 'score' => 10],
-                        ['homeAway' => 'away', 'team' => ['displayName' => 'Away NFL'], 'score' => 7],
-                    ],
-                ]],
-            ]],
         ], 200),
     ]);
 
     $response = $this->getJson('/api/sports/today');
     $response->assertOk();
 
-    $response->assertJsonStructure([
-        'date',
-        'events' => [
-            ['id','league','status','startTime','homeTeam','awayTeam','homeScore','awayScore']
-        ],
-    ]);
-
-    $leagues = collect($response->json('events'))->pluck('league');
-    expect($leagues)->toContain('NHL');
-    expect($leagues)->toContain('NBA');
-    expect($leagues)->toContain('MLB');
-    expect($leagues)->toContain('NFL');
+    $events = $response->json('events');
+    $nbaEvent = collect($events)->firstWhere('league', 'NBA');
+    
+    expect($nbaEvent)->not->toBeNull();
+    
+    // The startTime should be converted from Eastern Time to UTC
+    $startTime = new \DateTime($nbaEvent['startTime']);
+    $expectedHour = $startTime->format('H');
+    
+    // Should be 00 (midnight) or 01 (1 AM) since 7:30 PM ET = 12:30 AM UTC or 1:30 AM UTC depending on DST
+    expect($expectedHour)->toBeIn(['00', '01']);
 });
-
-

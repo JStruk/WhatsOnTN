@@ -124,7 +124,8 @@ class TodaySportsService
 
     /**
      * NBA: https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json
-     * This endpoint ignores date parameter and always returns today (ET). We'll still pass along for consistency.
+     * This endpoint ignores date parameter and always returns today. 
+     * Note: gameEt appears to be in UTC format but represents Eastern Time games.
      */
     protected function fetchNba(string $date): array
     {
@@ -141,7 +142,7 @@ class TodaySportsService
                 'id' => (string)($game['gameId'] ?? ''),
                 'league' => 'NBA',
                 'status' => $this->normalizeStatusNba($game['gameStatusText'] ?? ''),
-                'startTime' => $this->toIso($game['gameEt'] ?? null),
+                'startTime' => $this->toIsoFromNbaUtc($game['gameEt'] ?? null),
                 'venue' => $game['arenaName'] ?? null,
                 'homeTeam' => $game['homeTeam']['teamName'] ?? '',
                 'awayTeam' => $game['awayTeam']['teamName'] ?? '',
@@ -277,6 +278,25 @@ class TodaySportsService
             return Carbon::now()->toIso8601String();
         }
     }
+
+    /**
+     * Convert NBA's UTC-formatted time to proper Eastern Time ISO format.
+     * NBA API returns times like "2025-10-22T19:00:00Z" but these represent Eastern Time games.
+     */
+    protected function toIsoFromNbaUtc(?string $dateTime): string
+    {
+        if (!$dateTime) {
+            return Carbon::now()->toIso8601String();
+        }
+        try {
+            // Remove the 'Z' suffix and parse as Eastern Time
+            $easternTime = str_replace('Z', '', $dateTime);
+            return Carbon::parse($easternTime, 'America/New_York')->utc()->toIso8601String();
+        } catch (\Throwable $e) {
+            return Carbon::now()->toIso8601String();
+        }
+    }
+
 }
 
 
