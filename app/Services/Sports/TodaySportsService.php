@@ -217,15 +217,18 @@ class TodaySportsService
     }
 
     /**
-     * NFL: Use ESPN public scoreboard for a given date
-     * https://site.api.espn.com/apis/v2/sports/football/nfl/scoreboard?dates=YYYYMMDD
+     * NFL: Use ESPN Partners API for a given date
+     * https://partners.api.espn.com/v2/sports/football/nfl/events?dates=YYYYMMDD-YYYYMMDD
+     * Note: The API returns games for the specified date
      */
     protected function fetchNfl(string $date): array
     {
-        $ymd = Carbon::parse($date, config('app.timezone'))->format('Ymd');
-        $url = 'https://site.api.espn.com/apis/v2/sports/football/nfl/scoreboard';
+        // Convert the requested date to the same day for the API call
+        // The ESPN Partners API returns games for the specified date
+        $apiDate = Carbon::parse($date, config('app.timezone'))->format('Ymd');
+        $url = 'https://partners.api.espn.com/v2/sports/football/nfl/events';
         $response = Http::timeout(10)->retry(1, 200)->get($url, [
-            'dates' => $ymd,
+            'dates' => "{$apiDate}-{$apiDate}",
         ]);
         if (!$response->ok()) {
             return [];
@@ -246,8 +249,8 @@ class TodaySportsService
                 'venue' => $competitions['venue']['fullName'] ?? null,
                 'homeTeam' => $home['team']['displayName'] ?? '',
                 'awayTeam' => $away['team']['displayName'] ?? '',
-                'homeScore' => isset($home['score']) ? (int)$home['score'] : 0,
-                'awayScore' => isset($away['score']) ? (int)$away['score'] : 0,
+                'homeScore' => isset($home['score']['value']) ? (int)$home['score']['value'] : 0,
+                'awayScore' => isset($away['score']['value']) ? (int)$away['score']['value'] : 0,
                 'link' => $event['links'][0]['href'] ?? null,
             ];
         }
