@@ -24,3 +24,8 @@ Route::get('/sports/today', [SportsController::class, 'index'])->name('sports.to
 Route::get('/v2', function () {
     return Inertia::render('v2/Index');
 })->name('v2.index');
+
+// V3 redesigned UI
+Route::get('/v3', function () {
+    return Inertia::render('v3/Index');
+})->name('v3.index');
