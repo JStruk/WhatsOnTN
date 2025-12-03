@@ -2,6 +2,7 @@
 
 namespace App\Services\Sports;
 
+use App\Models\Game;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -9,35 +10,49 @@ use Illuminate\Support\Facades\Http;
 class TodaySportsService
 {
     /**
-     * Fetch and normalize today's events across major leagues.
+     * Fetch today's events from the database across major leagues.
      *
      * @param string|null $date Y-m-d in app timezone, defaults to today
      * @param string $timezone Timezone for date filtering (defaults to America/New_York for North American sports)
      * @return array<int, array<string, mixed>>
      */
-    public function getTodayEvents(?string $date = null, string $timezone = 'America/New_York'): array
+    public function getTodayEvents(string $timezone = 'America/New_York'): array
     {
-        $dateLocal = $date ? Carbon::parse($date, config('app.timezone')) : Carbon::now(config('app.timezone'));
-        $dateStr = $dateLocal->format('Y-m-d');
-
+        $dateStr = Carbon::now(config('app.timezone'))->toDateString();
         $cacheKey = "sports:today:{$dateStr}:{$timezone}";
 
-        return Cache::remember($cacheKey, now()->addSeconds(60), function () use ($dateStr, $timezone) {
+        return Cache::remember($cacheKey, now()->addSeconds(60), static function () use ($timezone) {
+            $startOfDay = Carbon::now($timezone)->startOfDay()->utc();
+            $endOfDay = Carbon::now($timezone)->endOfDay()->utc();
+
+            $games = Game::query()
+                ->whereBetween('start_time_utc', [$startOfDay, $endOfDay])
+                ->orderBy('start_time_utc')
+                ->get();
+
             $events = [];
 
-            // Fetch in sequence to keep it simple; endpoints are fast and cached
-            $events = array_merge(
-                $events,
-                $this->fetchNhl($dateStr, $timezone),
-                $this->fetchNba($dateStr),
-                $this->fetchMlb($dateStr),
-                $this->fetchNfl($dateStr)
-            );
+            foreach ($games as $game) {
+                // Format startTime as ISO8601
+                $startTime = $game->start_time_utc
+                    ? Carbon::parse($game->start_time_utc)->toIso8601String()
+                    : Carbon::now()->toIso8601String();
 
-            // Sort by start time
-            usort($events, function ($a, $b) {
-                return strcmp($a['startTime'], $b['startTime']);
-            });
+                $events[] = [
+                    'id' => $game->external_id ?? '',
+                    'league' => $game->league,
+                    'status' => $game->status ?? 'scheduled',
+                    'startTime' => $startTime,
+                    'startTimeUTC' => $game->start_time_utc,
+                    'venue' => $game->venue,
+                    'venueTimezone' => $game->venue_timezone,
+                    'homeTeam' => $game->home_team ?? '',
+                    'awayTeam' => $game->away_team ?? '',
+                    'homeScore' => $game->home_score ?? 0,
+                    'awayScore' => $game->away_score ?? 0,
+                    'link' => $game->link,
+                ];
+            }
 
             return $events;
         });
@@ -46,7 +61,7 @@ class TodaySportsService
     /**
      * NHL: https://api-web.nhle.com/v1/schedule/YYYY-MM-DD
      */
-    protected function fetchNhl(string $date, string $timezone = 'America/New_York'): array
+    public function fetchNhl(string $date, string $timezone = 'America/New_York'): array
     {
         $url = "https://api-web.nhle.com/v1/schedule/{$date}";
         $response = Http::timeout(10)->retry(1, 200)->get($url);
@@ -124,10 +139,9 @@ class TodaySportsService
 
     /**
      * NBA: https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json
-     * This endpoint ignores date parameter and always returns today. 
      * Note: gameEt appears to be in UTC format but represents Eastern Time games.
      */
-    protected function fetchNba(string $date): array
+    public function fetchNba(): array
     {
         $url = 'https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json';
         $response = Http::timeout(10)->retry(1, 200)->get($url);
@@ -143,6 +157,7 @@ class TodaySportsService
                 'league' => 'NBA',
                 'status' => $this->normalizeStatusNba($game['gameStatusText'] ?? ''),
                 'startTime' => $this->toIsoFromNbaUtc($game['gameEt'] ?? null),
+                'startTimeUTC' => $game['gameTimeUTC'],
                 'venue' => $game['arenaName'] ?? null,
                 'homeTeam' => $game['homeTeam']['teamName'] ?? '',
                 'awayTeam' => $game['awayTeam']['teamName'] ?? '',
@@ -169,8 +184,9 @@ class TodaySportsService
     /**
      * MLB: https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=YYYY-MM-DD&hydrate=team,linescore
      */
-    protected function fetchMlb(string $date): array
+    public function fetchMlb(string $date): array
     {
+        //TODO fix start time UTC
         $url = 'https://statsapi.mlb.com/api/v1/schedule';
         $response = Http::timeout(10)->retry(1, 200)->get($url, [
             'sportId' => 1,
@@ -221,7 +237,7 @@ class TodaySportsService
      * https://partners.api.espn.com/v2/sports/football/nfl/events?dates=YYYYMMDD-YYYYMMDD
      * Note: The API returns games for the specified date
      */
-    protected function fetchNfl(string $date): array
+    public function fetchNfl(string $date): array
     {
         // Convert the requested date to the same day for the API call
         // The ESPN Partners API returns games for the specified date
