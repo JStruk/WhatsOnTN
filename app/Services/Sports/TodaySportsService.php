@@ -21,7 +21,7 @@ class TodaySportsService
         $dateStr = Carbon::now(config('app.timezone'))->toDateString();
         $cacheKey = "sports:today:{$dateStr}:{$timezone}";
 
-        return Cache::remember($cacheKey, now()->addSeconds(60), static function () use ($timezone) {
+        return Cache::remember($cacheKey, now()->addHour(), static function () use ($timezone) {
             $startOfDay = Carbon::now($timezone)->startOfDay()->utc();
             $endOfDay = Carbon::now($timezone)->endOfDay()->utc();
 
