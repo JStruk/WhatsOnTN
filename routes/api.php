@@ -7,4 +7,4 @@ use Illuminate\Support\Facades\Route;
 Route::get('/user', static fn(Request $request) => $request->user())
     ->middleware('auth:sanctum');
 
-Route::get('/todays-events', TodayController::class);
+Route::get('/todays-events', TodayController::class)->middleware('throttle:10,1');
