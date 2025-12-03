@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\TodayEventResource;
 use App\Services\Sports\TodaySportsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
