@@ -18,11 +18,8 @@ return new class extends Migration
             $table->string('league', 10); // e.g. NHL, NBA, MLB, NFL
             $table->string('external_id')->nullable(); // ID from upstream API
 
-            // Normalized timing information
-            // game_date is the date in the app's primary timezone (config('app.timezone'))
             $table->date('game_date');
-            // Always stored as UTC
-            $table->timestampTz('start_time_utc');
+            $table->datetime('start_time_utc')->nullable();
 
             // Status and metadata
             $table->string('status', 20)->default('scheduled');

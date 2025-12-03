@@ -22,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
     })
+    ->withSchedule(function ($schedule) {
+        // Fetch games for all leagues daily at 5:00 AM
+        $schedule->command('sports:fetch-games')->dailyAt('05:00');
+    })
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();

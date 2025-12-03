@@ -46,7 +46,7 @@ class TodaySportsService
     /**
      * NHL: https://api-web.nhle.com/v1/schedule/YYYY-MM-DD
      */
-    protected function fetchNhl(string $date, string $timezone = 'America/New_York'): array
+    public function fetchNhl(string $date, string $timezone = 'America/New_York'): array
     {
         $url = "https://api-web.nhle.com/v1/schedule/{$date}";
         $response = Http::timeout(10)->retry(1, 200)->get($url);
@@ -124,10 +124,9 @@ class TodaySportsService
 
     /**
      * NBA: https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json
-     * This endpoint ignores date parameter and always returns today. 
      * Note: gameEt appears to be in UTC format but represents Eastern Time games.
      */
-    protected function fetchNba(string $date): array
+    public function fetchNba(): array
     {
         $url = 'https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json';
         $response = Http::timeout(10)->retry(1, 200)->get($url);
@@ -169,8 +168,9 @@ class TodaySportsService
     /**
      * MLB: https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=YYYY-MM-DD&hydrate=team,linescore
      */
-    protected function fetchMlb(string $date): array
+    public function fetchMlb(string $date): array
     {
+        //TODO fix start time UTC
         $url = 'https://statsapi.mlb.com/api/v1/schedule';
         $response = Http::timeout(10)->retry(1, 200)->get($url, [
             'sportId' => 1,
@@ -221,7 +221,7 @@ class TodaySportsService
      * https://partners.api.espn.com/v2/sports/football/nfl/events?dates=YYYYMMDD-YYYYMMDD
      * Note: The API returns games for the specified date
      */
-    protected function fetchNfl(string $date): array
+    public function fetchNfl(string $date): array
     {
         // Convert the requested date to the same day for the API call
         // The ESPN Partners API returns games for the specified date

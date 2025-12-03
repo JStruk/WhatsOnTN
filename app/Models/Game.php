@@ -24,10 +24,13 @@ class Game extends Model
         'link',
     ];
 
-    protected $casts = [
-        'game_date' => 'date',
-        'start_time_utc' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'game_date' => 'date',
+             'start_time_utc' => 'datetime',
+        ];
+    }
 }
 
 
