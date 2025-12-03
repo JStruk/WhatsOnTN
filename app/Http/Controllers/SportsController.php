@@ -12,7 +12,7 @@ class SportsController extends Controller
     {
         $date = $request->query('date');
         $timezone = $request->query('timezone', 'America/New_York'); // Default to Eastern for North American sports
-        $events = $service->getTodayEvents($date, $timezone);
+        $events = $service->getTodayEvents($timezone);
 
         return response()->json([
             'date' => $date ?? now()->timezone(config('app.timezone'))->toDateString(),

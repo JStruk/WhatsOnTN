@@ -2,6 +2,7 @@
 
 namespace App\Services\Sports;
 
+use App\Models\Game;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -9,35 +10,49 @@ use Illuminate\Support\Facades\Http;
 class TodaySportsService
 {
     /**
-     * Fetch and normalize today's events across major leagues.
+     * Fetch today's events from the database across major leagues.
      *
      * @param string|null $date Y-m-d in app timezone, defaults to today
      * @param string $timezone Timezone for date filtering (defaults to America/New_York for North American sports)
      * @return array<int, array<string, mixed>>
      */
-    public function getTodayEvents(?string $date = null, string $timezone = 'America/New_York'): array
+    public function getTodayEvents(string $timezone = 'America/New_York'): array
     {
-        $dateLocal = $date ? Carbon::parse($date, config('app.timezone')) : Carbon::now(config('app.timezone'));
-        $dateStr = $dateLocal->format('Y-m-d');
-
+        $dateStr = Carbon::now(config('app.timezone'))->toDateString();
         $cacheKey = "sports:today:{$dateStr}:{$timezone}";
 
-        return Cache::remember($cacheKey, now()->addSeconds(60), function () use ($dateStr, $timezone) {
+        return Cache::remember($cacheKey, now()->addSeconds(60), static function () use ($timezone) {
+            $startOfDay = Carbon::now($timezone)->startOfDay()->utc();
+            $endOfDay = Carbon::now($timezone)->endOfDay()->utc();
+
+            $games = Game::query()
+                ->whereBetween('start_time_utc', [$startOfDay, $endOfDay])
+                ->orderBy('start_time_utc')
+                ->get();
+
             $events = [];
 
-            // Fetch in sequence to keep it simple; endpoints are fast and cached
-            $events = array_merge(
-                $events,
-                $this->fetchNhl($dateStr, $timezone),
-                $this->fetchNba($dateStr),
-                $this->fetchMlb($dateStr),
-                $this->fetchNfl($dateStr)
-            );
+            foreach ($games as $game) {
+                // Format startTime as ISO8601
+                $startTime = $game->start_time_utc
+                    ? Carbon::parse($game->start_time_utc)->toIso8601String()
+                    : Carbon::now()->toIso8601String();
 
-            // Sort by start time
-            usort($events, function ($a, $b) {
-                return strcmp($a['startTime'], $b['startTime']);
-            });
+                $events[] = [
+                    'id' => $game->external_id ?? '',
+                    'league' => $game->league,
+                    'status' => $game->status ?? 'scheduled',
+                    'startTime' => $startTime,
+                    'startTimeUTC' => $game->start_time_utc,
+                    'venue' => $game->venue,
+                    'venueTimezone' => $game->venue_timezone,
+                    'homeTeam' => $game->home_team ?? '',
+                    'awayTeam' => $game->away_team ?? '',
+                    'homeScore' => $game->home_score ?? 0,
+                    'awayScore' => $game->away_score ?? 0,
+                    'link' => $game->link,
+                ];
+            }
 
             return $events;
         });
@@ -142,6 +157,7 @@ class TodaySportsService
                 'league' => 'NBA',
                 'status' => $this->normalizeStatusNba($game['gameStatusText'] ?? ''),
                 'startTime' => $this->toIsoFromNbaUtc($game['gameEt'] ?? null),
+                'startTimeUTC' => $game['gameTimeUTC'],
                 'venue' => $game['arenaName'] ?? null,
                 'homeTeam' => $game['homeTeam']['teamName'] ?? '',
                 'awayTeam' => $game['awayTeam']['teamName'] ?? '',
