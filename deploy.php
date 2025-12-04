@@ -32,6 +32,13 @@ task('npm:build', function () {
     run('cd {{release_path}} && npm run build');
 });
 
+task('cron:install', function () {
+    $cron = "* * * * * php {{deploy_path}}/current/artisan schedule:run >> /dev/null 2>&1";
+    run("echo '$cron' | crontab -");
+});
+
+after('deploy:symlink', 'cron:install');
+
 after('deploy:vendors', 'npm:install'); // runs `composer install`
 after('npm:install', 'npm:build');
 
