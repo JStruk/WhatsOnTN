@@ -14,20 +14,22 @@ Artisan::command('inspire', function () {
 
 Artisan::command('sports:fetch-games {date?}', function (?string $date = null) {
     $date = $date ?: Carbon::now(config('app.timezone'))->format('Y-m-d');
-    
+
     $this->info("Fetching games for {$date}...");
-    
+
     FetchNhlGames::dispatch($date);
     FetchNbaGames::dispatch($date);
     FetchMlbGames::dispatch($date);
     FetchNflGames::dispatch($date);
-    
+
     $this->info("Dispatched jobs for all leagues.");
-})->purpose('Fetch games for all leagues for a given date (defaults to today)');
+})
+    ->purpose('Fetch games for all leagues for a given date (defaults to today)')
+    ->dailyAt('04:00');
 
 Artisan::command('sports:fetch-nhl {date?}', function (?string $date = null) {
     $date = $date ?: Carbon::now(config('app.timezone'))->format('Y-m-d');
-    
+
     $this->info("Fetching NHL games for {$date}...");
     FetchNhlGames::dispatch($date);
     $this->info("Dispatched NHL job.");
@@ -35,7 +37,7 @@ Artisan::command('sports:fetch-nhl {date?}', function (?string $date = null) {
 
 Artisan::command('sports:fetch-nba {date?}', function (?string $date = null) {
     $date = $date ?: Carbon::now(config('app.timezone'))->format('Y-m-d');
-    
+
     $this->info("Fetching NBA games for {$date}...");
     FetchNbaGames::dispatch($date);
     $this->info("Dispatched NBA job.");
@@ -43,7 +45,7 @@ Artisan::command('sports:fetch-nba {date?}', function (?string $date = null) {
 
 Artisan::command('sports:fetch-mlb {date?}', function (?string $date = null) {
     $date = $date ?: Carbon::now(config('app.timezone'))->format('Y-m-d');
-    
+
     $this->info("Fetching MLB games for {$date}...");
     FetchMlbGames::dispatch($date);
     $this->info("Dispatched MLB job.");
@@ -51,7 +53,7 @@ Artisan::command('sports:fetch-mlb {date?}', function (?string $date = null) {
 
 Artisan::command('sports:fetch-nfl {date?}', function (?string $date = null) {
     $date = $date ?: Carbon::now(config('app.timezone'))->format('Y-m-d');
-    
+
     $this->info("Fetching NFL games for {$date}...");
     FetchNflGames::dispatch($date);
     $this->info("Dispatched NFL job.");
