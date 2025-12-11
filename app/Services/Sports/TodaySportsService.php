@@ -18,15 +18,17 @@ class TodaySportsService
      */
     public function getTodayEvents(string $timezone = 'America/New_York'): array
     {
-        $dateStr = Carbon::now(config('app.timezone'))->toDateString();
-        $cacheKey = "sports:today:{$dateStr}:{$timezone}";
+        // Get the start and end of "today" in the requested timezone
+        $startOfDay = Carbon::now($timezone)->startOfDay()->utc();
+        $endOfDay = Carbon::now($timezone)->endOfDay()->utc();
+        $todayInTimezone = Carbon::now($timezone)->toDateString();
+        $cacheKey = "sports:today:{$todayInTimezone}:{$timezone}";
 
-        return Cache::remember($cacheKey, now()->addHour(), static function () use ($timezone) {
-            $startOfDay = Carbon::now($timezone)->startOfDay()->utc();
-            $endOfDay = Carbon::now($timezone)->endOfDay()->utc();
-
+        return Cache::remember($cacheKey, now()->addHour(), static function () use ($startOfDay, $endOfDay, $timezone) {
+            // Get all games where start_time_utc falls within "today" in the user's timezone
             $games = Game::query()
-                ->whereBetween('start_time_utc', [$startOfDay, $endOfDay])
+                ->where('start_time_utc', '>=', $startOfDay)
+                ->where('start_time_utc', '<=', $endOfDay)
                 ->orderBy('start_time_utc')
                 ->get();
 
@@ -106,7 +108,7 @@ class TodaySportsService
                 ])));
 
                 $events[] = [
-                    'id' => (string)($game['id'] ?? ''),
+                    'id' => (string) ($game['id'] ?? ''),
                     'league' => 'NHL',
                     'status' => $this->normalizeStatusNhl($game['gameState'] ?? ''),
                     'startTime' => $this->toIso($game['startTimeUTC'] ?? null),
@@ -153,7 +155,7 @@ class TodaySportsService
         $events = [];
         foreach ($games as $game) {
             $events[] = [
-                'id' => (string)($game['gameId'] ?? ''),
+                'id' => (string) ($game['gameId'] ?? ''),
                 'league' => 'NBA',
                 'status' => $this->normalizeStatusNba($game['gameStatusText'] ?? ''),
                 'startTime' => $this->toIsoFromNbaUtc($game['gameEt'] ?? null),
@@ -161,8 +163,8 @@ class TodaySportsService
                 'venue' => $game['arenaName'] ?? null,
                 'homeTeam' => $game['homeTeam']['teamName'] ?? '',
                 'awayTeam' => $game['awayTeam']['teamName'] ?? '',
-                'homeScore' => (int)($game['homeTeam']['score'] ?? 0),
-                'awayScore' => (int)($game['awayTeam']['score'] ?? 0),
+                'homeScore' => (int) ($game['homeTeam']['score'] ?? 0),
+                'awayScore' => (int) ($game['awayTeam']['score'] ?? 0),
                 'link' => null,
             ];
         }
@@ -204,15 +206,15 @@ class TodaySportsService
                 $home = $game['teams']['home'] ?? [];
                 $away = $game['teams']['away'] ?? [];
                 $events[] = [
-                    'id' => (string)($game['gamePk'] ?? ''),
+                    'id' => (string) ($game['gamePk'] ?? ''),
                     'league' => 'MLB',
                     'status' => $this->normalizeStatusMlb($game['status']['detailedState'] ?? ''),
                     'startTime' => $this->toIso($game['gameDate'] ?? null),
                     'venue' => $game['venue']['name'] ?? null,
                     'homeTeam' => $home['team']['name'] ?? '',
                     'awayTeam' => $away['team']['name'] ?? '',
-                    'homeScore' => (int)($home['score'] ?? 0),
-                    'awayScore' => (int)($away['score'] ?? 0),
+                    'homeScore' => (int) ($home['score'] ?? 0),
+                    'awayScore' => (int) ($away['score'] ?? 0),
                     'link' => isset($game['link']) ? ('https://www.mlb.com' . $game['link']) : null,
                 ];
             }
@@ -258,15 +260,15 @@ class TodaySportsService
             $home = collect($competitors)->firstWhere('homeAway', 'home') ?? [];
             $away = collect($competitors)->firstWhere('homeAway', 'away') ?? [];
             $events[] = [
-                'id' => (string)($event['id'] ?? ''),
+                'id' => (string) ($event['id'] ?? ''),
                 'league' => 'NFL',
                 'status' => $this->normalizeStatusEspn($competitions['status']['type']['name'] ?? ''),
                 'startTime' => $this->toIso($event['date'] ?? null),
                 'venue' => $competitions['venue']['fullName'] ?? null,
                 'homeTeam' => $home['team']['displayName'] ?? '',
                 'awayTeam' => $away['team']['displayName'] ?? '',
-                'homeScore' => isset($home['score']['value']) ? (int)$home['score']['value'] : 0,
-                'awayScore' => isset($away['score']['value']) ? (int)$away['score']['value'] : 0,
+                'homeScore' => isset($home['score']['value']) ? (int) $home['score']['value'] : 0,
+                'awayScore' => isset($away['score']['value']) ? (int) $away['score']['value'] : 0,
                 'link' => $event['links'][0]['href'] ?? null,
             ];
         }

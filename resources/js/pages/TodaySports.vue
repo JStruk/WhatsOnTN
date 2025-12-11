@@ -23,11 +23,17 @@ type EventItem = {
   link?: string | null
 }
 
-const loading = ref(true)
+// Accept props from the server
+const props = defineProps<{
+  initialEvents?: EventItem[]
+  initialTimezone?: string
+}>()
+
+const loading = ref(false)
 const error = ref<string | null>(null)
-const events = ref<EventItem[]>([])
-const lastUpdated = ref<Date | null>(null)
-const userTimezone = ref<string>('')
+const events = ref<EventItem[]>(props.initialEvents || [])
+const lastUpdated = ref<Date | null>(props.initialEvents ? new Date() : null)
+const userTimezone = ref<string>(props.initialTimezone || '')
 let refreshTimer: number | null = null
 
 const leagues = ['All', 'NHL', 'NFL', 'MLB', 'NBA'] as const
@@ -113,7 +119,7 @@ function statusToBadgeVariant(status: string): 'default' | 'secondary' | 'destru
 }
 
 async function fetchEvents() {
-  loading.value = events.value.length === 0
+  loading.value = true
   error.value = null
   try {
     // Get user's timezone
@@ -148,7 +154,13 @@ function stopAutoRefresh() {
 }
 
 onMounted(async () => {
-  await fetchEvents()
+  // If we don't have initial data, fetch it
+  if (!props.initialEvents || props.initialEvents.length === 0) {
+    await fetchEvents()
+  } else {
+    // Detect user's timezone even if we have initial data
+    userTimezone.value = Intl.DateTimeFormat().resolvedOptions().timeZone
+  }
   startAutoRefresh(60000)
 })
 
