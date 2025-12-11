@@ -39,6 +39,12 @@ task('cron:install', function () {
 
 after('deploy:symlink', 'cron:install');
 
+task('queue:restart', function () {
+    run('php {{deploy_path}}/current/artisan queue:restart');
+})->desc('Signal queue workers to restart');
+
+after('deploy:symlink', 'queue:restart');
+
 after('deploy:vendors', 'npm:install'); // runs `composer install`
 after('npm:install', 'npm:build');
 
