@@ -171,6 +171,57 @@ class TodaySportsService
         return $events;
     }
 
+    /**
+     * NBA Season Schedule: https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json
+     * Fetches the entire season schedule. Should be run once annually in early August.
+     */
+    public function fetchNbaSeasonSchedule(): array
+    {
+        $url = 'https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json';
+        $response = Http::timeout(30)->retry(2, 500)->get($url);
+
+        if (!$response->ok()) {
+            return [];
+        }
+
+        $json = $response->json();
+        $gameDates = $json['leagueSchedule']['gameDates'] ?? [];
+        $events = [];
+
+        foreach ($gameDates as $dateEntry) {
+            $games = $dateEntry['games'] ?? [];
+
+            foreach ($games as $game) {
+                $homeTeam = $game['homeTeam'] ?? [];
+                $awayTeam = $game['awayTeam'] ?? [];
+
+                // Build full team names
+                $homeName = trim(($homeTeam['teamCity'] ?? '') . ' ' . ($homeTeam['teamName'] ?? ''));
+                $awayName = trim(($awayTeam['teamCity'] ?? '') . ' ' . ($awayTeam['teamName'] ?? ''));
+
+                // Use gameDateTimeUTC for the start time
+                $startTimeUTC = $game['gameDateTimeUTC'] ?? null;
+
+                $events[] = [
+                    'id' => (string) ($game['gameId'] ?? ''),
+                    'league' => 'NBA',
+                    'status' => $this->normalizeStatusNba($game['gameStatusText'] ?? ''),
+                    'startTime' => $this->toIso($startTimeUTC),
+                    'startTimeUTC' => $startTimeUTC,
+                    'venue' => $game['arenaName'] ?? null,
+                    'venueTimezone' => null, // Not provided in this endpoint
+                    'homeTeam' => $homeName !== '' ? $homeName : ($homeTeam['teamTricode'] ?? ''),
+                    'awayTeam' => $awayName !== '' ? $awayName : ($awayTeam['teamTricode'] ?? ''),
+                    'homeScore' => (int) ($homeTeam['score'] ?? 0),
+                    'awayScore' => (int) ($awayTeam['score'] ?? 0),
+                    'link' => null,
+                ];
+            }
+        }
+
+        return $events;
+    }
+
     protected function normalizeStatusNba(string $text): string
     {
         $t = strtoupper($text);

@@ -251,7 +251,6 @@ onBeforeUnmount(() => {
               <Badge :variant="statusToBadgeVariant(e.status)">{{ e.status }}</Badge>
             </div>
           </div>
-          <div v-if="e.league === 'NBA' && isBeforeNoonET" class="text-xs text-muted-foreground">NBA games aren’t refreshed until 12 PM EST</div>
           <CardDescription v-if="e.venue" class="truncate">{{ e.venue }}</CardDescription>
         </CardHeader>
         <CardContent class="grid gap-3">

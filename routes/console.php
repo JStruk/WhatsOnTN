@@ -18,14 +18,12 @@ Artisan::command('sports:fetch-games {date?}', function (?string $date = null) {
     $this->info("Fetching games for {$date}...");
 
     FetchNhlGames::dispatch($date);
-    FetchNbaGames::dispatch($date);
     FetchMlbGames::dispatch($date);
     FetchNflGames::dispatch($date);
 
     $this->info("Dispatched jobs for all leagues.");
 })
-    ->purpose('Fetch games for all leagues for a given date (defaults to today)')
-    ->dailyAt('04:00');
+    ->purpose('Fetch games for all leagues for a given date (defaults to today)');
 
 Artisan::command('sports:fetch-nhl {date?}', function (?string $date = null) {
     $date = $date ?: Carbon::now(config('app.timezone'))->format('Y-m-d');

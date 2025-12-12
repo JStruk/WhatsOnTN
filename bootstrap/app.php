@@ -26,6 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function ($schedule) {
         // Fetch games for all leagues daily at 5:00 AM
         $schedule->command('sports:fetch-games')->dailyAt('05:00');
+
+        // Fetch NBA season schedule annually on August 1st at 2:00 AM
+        $schedule->command('sports:fetch-nba-season')->yearlyOn(8, 1, '02:00');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
