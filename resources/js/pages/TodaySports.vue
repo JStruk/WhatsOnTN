@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, onBeforeUnmount } from 'vue'
+import { router } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -119,6 +120,7 @@ function statusToBadgeVariant(status: string): 'default' | 'secondary' | 'destru
 }
 
 async function fetchEvents() {
+    console.log('fetchevents');
   loading.value = true
   error.value = null
   try {
@@ -151,6 +153,16 @@ function stopAutoRefresh() {
     clearInterval(refreshTimer)
     refreshTimer = null
   }
+}
+
+function refreshWithCacheClear() {
+  // Use Inertia router to POST to the refresh endpoint
+  // This will clear the cache on the server and redirect back with fresh data
+  const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  router.post(`/sports/refresh?timezone=${encodeURIComponent(detectedTimezone)}`, {}, {
+    preserveState: false,
+    preserveScroll: false,
+  })
 }
 
 onMounted(async () => {
@@ -188,7 +200,7 @@ onBeforeUnmount(() => {
           <div class="text-xs text-white/85" v-if="userTimezone">Timezone: {{ userTimezone }}</div>
           <div class="hidden sm:block h-6 w-px bg-white/30"></div>
           <div class="text-xs text-white/85" v-if="lastUpdated">Updated {{ formatDate(lastUpdated) }}</div>
-          <Button :disabled="loading" variant="secondary" size="sm" @click="fetchEvents">Refresh</Button>
+          <Button :disabled="loading" variant="secondary" size="sm" @click="refreshWithCacheClear">Refresh</Button>
         </div>
       </div>
     </div>

@@ -6,8 +6,10 @@ use App\Http\Resources\TodayEventResource;
 use App\Services\Sports\TodaySportsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Http\RedirectResponse;
 
 class SportsController extends Controller
 {
@@ -33,6 +35,19 @@ class SportsController extends Controller
             'timezone' => $timezone,
             'events' => $events,
         ]);
+    }
+
+    public function refresh(Request $request): RedirectResponse
+    {
+        // Clear all sports cache entries for today
+        $timezone = $request->query('timezone', 'America/New_York');
+        $todayInTimezone = now($timezone)->toDateString();
+        $cacheKey = "sports:today:{$todayInTimezone}:{$timezone}";
+
+        Cache::forget($cacheKey);
+
+        // Redirect back to the sports page with the timezone parameter
+        return redirect()->route('sports.today', ['timezone' => $timezone]);
     }
 }
 
