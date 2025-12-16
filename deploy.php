@@ -32,13 +32,6 @@ task('npm:build', function () {
     run('cd {{release_path}} && npm run build');
 });
 
-task('cron:install', function () {
-    $cron = "* * * * * php {{deploy_path}}/current/artisan schedule:run >> /dev/null 2>&1";
-    run("echo '$cron' | crontab -");
-});
-
-after('deploy:symlink', 'cron:install');
-
 task('queue:restart', function () {
     run('php {{deploy_path}}/current/artisan queue:restart');
 })->desc('Signal queue workers to restart');
