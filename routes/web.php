@@ -20,12 +20,7 @@ Route::get('dashboard', function () {
 // Sports page route
 Route::get('/sports/today', [SportsController::class, 'index'])->name('sports.today');
 
-// V2 redesigned UI
+// V2 Events Dashboard
 Route::get('/v2', function () {
-    return Inertia::render('v2/Index');
-})->name('v2.index');
-
-// V3 redesigned UI
-Route::get('/v3', function () {
-    return Inertia::render('v3/Index');
-})->name('v3.index');
+    return Inertia::render('EventsDashboardV2');
+})->name('events.v2');
