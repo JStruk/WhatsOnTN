@@ -20,6 +20,8 @@ type EventItem = {
   homeScore: number
   awayScore: number
   link?: string | null
+  homeTeamLogo?: string | null
+  awayTeamLogo?: string | null
 }
 
 const loading = ref(true)
@@ -86,10 +88,7 @@ function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destr
 }
 
 // Placeholder logo - using the NHL logo pattern provided
-const getTeamLogo = (league: string, teamName: string) => {
-  // For now, use the NHL Oilers logo as placeholder for all teams
-  return 'https://assets.nhle.com/logos/nhl/svg/EDM_light.svg'
-}
+const placeholderLogo = 'https://assets.nhle.com/logos/nhl/svg/EDM_light.svg'
 
 async function fetchEvents() {
   loading.value = events.value.length === 0
@@ -248,7 +247,7 @@ onBeforeUnmount(() => {
                       <div class="flex items-center gap-3 min-w-0 flex-1">
                         <div class="size-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           <img 
-                            :src="getTeamLogo(game.league, game.awayTeam)" 
+                            :src="game.awayTeamLogo || placeholderLogo" 
                             :alt="game.awayTeam"
                             class="size-full object-cover"
                           />
@@ -284,7 +283,7 @@ onBeforeUnmount(() => {
                       <div class="flex items-center gap-3 min-w-0 flex-1">
                         <div class="size-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           <img 
-                            :src="getTeamLogo(game.league, game.homeTeam)" 
+                            :src="game.homeTeamLogo || placeholderLogo" 
                             :alt="game.homeTeam"
                             class="size-full object-cover"
                           />

@@ -26,7 +26,9 @@ class TodaySportsService
 
         return Cache::remember($cacheKey, now()->addHour(), static function () use ($startOfDay, $endOfDay, $timezone) {
             // Get all games where start_time_utc falls within "today" in the user's timezone
+            // Eager load team relationships
             $games = Game::query()
+                ->with(['homeTeam', 'awayTeam'])
                 ->where('start_time_utc', '>=', $startOfDay)
                 ->where('start_time_utc', '<=', $endOfDay)
                 ->orderBy('start_time_utc')
@@ -53,6 +55,9 @@ class TodaySportsService
                     'homeScore' => $game->home_score ?? 0,
                     'awayScore' => $game->away_score ?? 0,
                     'link' => $game->link,
+                    // Add team logo URLs
+                    'homeTeamLogo' => $game->homeTeam?->logo_url,
+                    'awayTeamLogo' => $game->awayTeam?->logo_url,
                 ];
             }
 

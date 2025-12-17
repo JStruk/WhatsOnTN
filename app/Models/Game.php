@@ -28,8 +28,24 @@ class Game extends Model
     {
         return [
             'game_date' => 'date',
-             'start_time_utc' => 'datetime',
+            'start_time_utc' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the home team for this game.
+     */
+    public function homeTeam()
+    {
+        return $this->belongsTo(Team::class, 'home_team_id');
+    }
+
+    /**
+     * Get the away team for this game.
+     */
+    public function awayTeam()
+    {
+        return $this->belongsTo(Team::class, 'away_team_id');
     }
 }
 
