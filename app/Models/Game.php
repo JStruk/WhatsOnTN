@@ -22,14 +22,32 @@ class Game extends Model
         'home_score',
         'away_score',
         'link',
+        'home_team_id',
+        'away_team_id',
     ];
 
     protected function casts(): array
     {
         return [
             'game_date' => 'date',
-             'start_time_utc' => 'datetime',
+            'start_time_utc' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the home team for this game.
+     */
+    public function homeTeam()
+    {
+        return $this->belongsTo(Team::class, 'home_team_id');
+    }
+
+    /**
+     * Get the away team for this game.
+     */
+    public function awayTeam()
+    {
+        return $this->belongsTo(Team::class, 'away_team_id');
     }
 }
 

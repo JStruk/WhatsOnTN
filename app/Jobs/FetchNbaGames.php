@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Game;
+use App\Models\Team;
 use App\Services\Sports\TodaySportsService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,7 +16,9 @@ class FetchNbaGames implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public string $date) {}
+    public function __construct(public string $date)
+    {
+    }
 
     public function handle(TodaySportsService $service): void
     {
@@ -30,6 +33,15 @@ class FetchNbaGames implements ShouldQueue
     {
         $gameDate = Carbon::parse($event['startTime'])->setTimezone(config('app.timezone'))->toDateString() ?? Carbon::now()->toDateString();
 
+        // Lookup teams from the teams table
+        $homeTeam = Team::where('league', $event['league'])
+            ->where('name', $event['homeTeam'] ?? '')
+            ->first();
+
+        $awayTeam = Team::where('league', $event['league'])
+            ->where('name', $event['awayTeam'] ?? '')
+            ->first();
+
         Game::query()->updateOrCreate(
             [
                 'league' => $event['league'],
@@ -43,6 +55,8 @@ class FetchNbaGames implements ShouldQueue
                 'venue_timezone' => null,
                 'home_team' => $event['homeTeam'] ?? '',
                 'away_team' => $event['awayTeam'] ?? '',
+                'home_team_id' => $homeTeam?->id,
+                'away_team_id' => $awayTeam?->id,
                 'home_score' => $event['homeScore'] ?? 0,
                 'away_score' => $event['awayScore'] ?? 0,
                 'link' => $event['link'] ?? null,
