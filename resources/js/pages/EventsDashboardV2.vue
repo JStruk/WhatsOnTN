@@ -81,7 +81,7 @@ const placeholderLogo = 'https://assets.nhle.com/logos/nhl/svg/EDM_light.svg'
 
 function handleRefresh() {
   refreshing.value = true
-  router.post('/v2/refresh', {
+  router.post('/refresh', {
     timezone: userTimezone.value || 'America/New_York'
   }, {
     preserveScroll: true,

@@ -70,8 +70,8 @@ class SportsController extends Controller
 
         Cache::forget($cacheKey);
 
-        // Redirect back to the V2 events page with the timezone parameter
-        return redirect()->route('events.v2', ['timezone' => $timezone]);
+        // Redirect back to the home page with the timezone parameter
+        return redirect()->route('home', ['timezone' => $timezone]);
     }
 }
 
