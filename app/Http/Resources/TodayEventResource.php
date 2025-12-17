@@ -15,14 +15,22 @@ class TodayEventResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'id' => $this->resource['id'] ?? '',
             'sport' => $this->resource['league'] ?? null,
             'league' => $this->resource['league'] ?? null,
+            'status' => $this->resource['status'] ?? 'scheduled',
             'homeTeam' => $this->resource['homeTeam'] ?? null,
             'awayTeam' => $this->resource['awayTeam'] ?? null,
+            'homeScore' => $this->resource['homeScore'] ?? 0,
+            'awayScore' => $this->resource['awayScore'] ?? 0,
+            'homeTeamLogo' => $this->resource['homeTeamLogo'] ?? null,
+            'awayTeamLogo' => $this->resource['awayTeamLogo'] ?? null,
             'venue' => $this->resource['venue'] ?? null,
+            'venueTimezone' => $this->resource['venueTimezone'] ?? null,
             'city' => $this->extractCity($this->resource['venue'] ?? null),
             'startTime' => $this->resource['startTime'] ?? null,
             'startTimeUTC' => $this->resource['startTimeUTC'] ?? null,
+            'link' => $this->resource['link'] ?? null,
             'isLive' => ($this->resource['status'] ?? 'scheduled') === 'live',
             'broadcast' => $this->resource['link'] ?? null,
             'statusText' => $this->resource['status'] ?? 'scheduled',

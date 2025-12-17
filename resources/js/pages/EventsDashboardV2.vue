@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, onBeforeUnmount } from 'vue'
+import { ref, computed } from 'vue'
+import { router } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Calendar, RefreshCw } from 'lucide-vue-next'
 
 type EventItem = {
@@ -24,12 +23,16 @@ type EventItem = {
   awayTeamLogo?: string | null
 }
 
-const loading = ref(true)
-const error = ref<string | null>(null)
-const events = ref<EventItem[]>([])
-const lastUpdated = ref<Date | null>(null)
-const userTimezone = ref<string>('')
-let refreshTimer: number | null = null
+// Define props to receive initial data from the server
+const props = defineProps<{
+  initialEvents?: EventItem[]
+  initialTimezone?: string
+}>()
+
+console.log(props);
+const refreshing = ref(false)
+const events = ref<EventItem[]>(props.initialEvents || [])
+const userTimezone = ref<string>(props.initialTimezone || '')
 
 // League priority order
 const leaguePriority = ['NHL', 'NFL', 'NBA', 'MLB']
@@ -67,20 +70,6 @@ function formatTime(iso: string) {
   })
 }
 
-function formatDate(d: Date | null) {
-  if (!d) return ''
-  return d.toLocaleTimeString(undefined, { 
-    hour: 'numeric', 
-    minute: '2-digit'
-  })
-}
-
-function getStatusColor(status: string): string {
-  if (status === 'live') return 'text-red-500'
-  if (status === 'final') return 'text-slate-500'
-  return 'text-slate-700 dark:text-slate-300'
-}
-
 function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
   if (status === 'live') return 'destructive'
   if (status === 'final') return 'secondary'
@@ -90,48 +79,17 @@ function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'destr
 // Placeholder logo - using the NHL logo pattern provided
 const placeholderLogo = 'https://assets.nhle.com/logos/nhl/svg/EDM_light.svg'
 
-async function fetchEvents() {
-  loading.value = events.value.length === 0
-  error.value = null
-  try {
-    const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-    userTimezone.value = detectedTimezone
-    const url = `/api/sports/today?timezone=${encodeURIComponent(detectedTimezone)}`
-
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
-    if (!res.ok) throw new Error('Failed to load sports data')
-    const json = await res.json()
-    events.value = json.events || []
-    lastUpdated.value = new Date()
-  } catch (e: any) {
-    error.value = e?.message || 'Unknown error'
-  } finally {
-    loading.value = false
-  }
+function handleRefresh() {
+  refreshing.value = true
+  router.post('/v2/refresh', {
+    timezone: userTimezone.value || 'America/New_York'
+  }, {
+    preserveScroll: true,
+    onFinish: () => {
+      refreshing.value = false
+    }
+  })
 }
-
-function startAutoRefresh(intervalMs = 60000) {
-  stopAutoRefresh()
-  refreshTimer = window.setInterval(() => {
-    fetchEvents()
-  }, intervalMs)
-}
-
-function stopAutoRefresh() {
-  if (refreshTimer) {
-    clearInterval(refreshTimer)
-    refreshTimer = null
-  }
-}
-
-onMounted(async () => {
-  await fetchEvents()
-  startAutoRefresh(60000)
-})
-
-onBeforeUnmount(() => {
-  stopAutoRefresh()
-})
 </script>
 
 <template>
@@ -158,58 +116,24 @@ onBeforeUnmount(() => {
               <span>{{ totalCount === 1 ? 'game' : 'games' }}</span>
             </div>
             <Button 
-              :disabled="loading" 
+              :disabled="refreshing" 
               variant="outline" 
               size="sm" 
-              @click="fetchEvents"
+              @click="handleRefresh"
               class="gap-2"
             >
-              <RefreshCw :class="['size-4', loading ? 'animate-spin' : '']" />
+              <RefreshCw :class="['size-4', refreshing ? 'animate-spin' : '']" />
               <span class="hidden sm:inline">Refresh</span>
             </Button>
           </div>
-        </div>
-        
-        <div v-if="lastUpdated" class="mt-3 text-xs text-slate-500 dark:text-slate-500">
-          Last updated: {{ formatDate(lastUpdated) }}
         </div>
       </div>
     </div>
 
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Error State -->
-      <Alert v-if="error" variant="destructive" class="mb-6">
-        <AlertTitle>Failed to load games</AlertTitle>
-        <AlertDescription>{{ error }}</AlertDescription>
-      </Alert>
-
-      <!-- Loading State -->
-      <div v-if="loading && !events.length" class="space-y-8">
-        <div v-for="n in 4" :key="n">
-          <Skeleton class="h-6 w-24 mb-4" />
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Card v-for="m in 3" :key="m">
-              <CardContent class="p-6">
-                <Skeleton class="h-4 w-16 mb-4" />
-                <div class="space-y-4">
-                  <div class="flex items-center gap-3">
-                    <Skeleton class="size-12 rounded-full" />
-                    <Skeleton class="h-5 w-32" />
-                  </div>
-                  <div class="flex items-center gap-3">
-                    <Skeleton class="size-12 rounded-full" />
-                    <Skeleton class="h-5 w-32" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-
       <!-- Games by League -->
-      <div v-else class="space-y-10">
+      <div class="space-y-10">
         <div v-for="league in leaguePriority" :key="league">
           <template v-if="groupedByLeague[league].length > 0">
             <!-- League Header -->

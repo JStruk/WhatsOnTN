@@ -37,6 +37,17 @@ class SportsController extends Controller
         ]);
     }
 
+    public function indexV2(Request $request, TodaySportsService $service): Response
+    {
+        $timezone = $request->query('timezone', 'America/New_York');
+        $events = $service->getTodayEvents($timezone);
+
+        return Inertia::render('EventsDashboardV2', [
+            'initialEvents' => TodayEventResource::collection($events)->resolve(),
+            'initialTimezone' => $timezone,
+        ]);
+    }
+
     public function refresh(Request $request): RedirectResponse
     {
         // Clear all sports cache entries for today
@@ -48,6 +59,19 @@ class SportsController extends Controller
 
         // Redirect back to the sports page with the timezone parameter
         return redirect()->route('sports.today', ['timezone' => $timezone]);
+    }
+
+    public function refreshV2(Request $request): RedirectResponse
+    {
+        // Clear all sports cache entries for today
+        $timezone = $request->query('timezone', 'America/New_York');
+        $todayInTimezone = now($timezone)->toDateString();
+        $cacheKey = "sports:today:{$todayInTimezone}:{$timezone}";
+
+        Cache::forget($cacheKey);
+
+        // Redirect back to the V2 events page with the timezone parameter
+        return redirect()->route('events.v2', ['timezone' => $timezone]);
     }
 }
 

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Game;
+use App\Models\Team;
 use App\Services\Sports\TodaySportsService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -37,6 +38,15 @@ class FetchNhlGames implements ShouldQueue
 
     protected function storeGame(array $event): void
     {
+        // Lookup teams from the teams table
+        $homeTeam = Team::where('league', $event['league'])
+            ->where('name', $event['homeTeam'] ?? '')
+            ->first();
+
+        $awayTeam = Team::where('league', $event['league'])
+            ->where('name', $event['awayTeam'] ?? '')
+            ->first();
+
         Game::query()->updateOrCreate(
             [
                 'league' => $event['league'],
@@ -50,6 +60,8 @@ class FetchNhlGames implements ShouldQueue
                 'venue_timezone' => $event['venueTimezone'] ?? null,
                 'home_team' => $event['homeTeam'] ?? '',
                 'away_team' => $event['awayTeam'] ?? '',
+                'home_team_id' => $homeTeam?->id,
+                'away_team_id' => $awayTeam?->id,
                 'home_score' => $event['homeScore'] ?? 0,
                 'away_score' => $event['awayScore'] ?? 0,
                 'link' => $event['link'] ?? null,

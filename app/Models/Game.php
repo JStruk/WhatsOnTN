@@ -22,6 +22,8 @@ class Game extends Model
         'home_score',
         'away_score',
         'link',
+        'home_team_id',
+        'away_team_id',
     ];
 
     protected function casts(): array

@@ -21,6 +21,5 @@ Route::get('dashboard', function () {
 Route::get('/sports/today', [SportsController::class, 'index'])->name('sports.today');
 
 // V2 Events Dashboard
-Route::get('/v2', function () {
-    return Inertia::render('EventsDashboardV2');
-})->name('events.v2');
+Route::get('/v2', [SportsController::class, 'indexV2'])->name('events.v2');
+Route::post('/v2/refresh', [SportsController::class, 'refreshV2'])->name('events.v2.refresh');
